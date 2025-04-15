@@ -5,9 +5,29 @@ plugins {
     id "application"
 }
 
-// Allow the command gradle run to run main
-application {
-    mainClass = 'Main'
+task runClient(type: JavaExec) {
+    group = "Client"
+    description = "Run the client class"
+
+    mainClass.set("Client")
+    classpath = sourceSets.main.runtimeClasspath
+
+    def host = project.hasProperty("Host") ? project.property("Host") : "localhost"
+    def port = project.hasProperty("Port") ? project.property("Port") : '8080'
+
+    args host, port
+}
+
+task runLeader(type: JavaExec) {
+    group = "Leader"
+    description = "Run the leader class"
+
+    mainClass.set("Leader")
+    classpath = sourceSets.main.runtimeClasspath
+
+    def port = project.hasProperty("Port") ? project.property("Port") : '8080'
+
+    args port
 }
 
 repositories {
