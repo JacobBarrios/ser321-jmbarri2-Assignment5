@@ -34,6 +34,19 @@ repositories {
     mavenCentral()
 }
 
+task runNodes(type: JavaExec) {
+    group = "Nodes"
+    description = "Run the nodes class"
+
+    mainClass.set("Nodes")
+    classpath = sourceSets.main.runtimeClasspath
+
+    def host = project.hasProperty("Host") ? project.property("Host") : "localhost"
+    def port = project.hasProperty("Port") ? project.property("Port") : '8080'
+
+    args host, port
+}
+
 dependencies {
     // Implement JUnit for tests
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
