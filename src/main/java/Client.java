@@ -10,7 +10,7 @@ public class Client {
 	public static void main(String[] args) {
 		String host = args[0];
 		int port = Integer.parseInt(args[1]);
-		Scanner scanner = new Scanner(System.in);
+		BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
 		
 		try(Socket server = new Socket(host, port);
 			PrintWriter out = new PrintWriter(server.getOutputStream(), true);
@@ -22,33 +22,32 @@ public class Client {
 				int size = 0;
 				boolean selecting = true;
 				while(selecting) {
+					System.out.println("Enter size of array: ");
+					
 					try {
-						System.out.println("Enter size of array: ");
-						size = scanner.nextInt();
+						size = Integer.parseInt(input.readLine());
 						
 						if(size < 0) {
-							System.out.println("Size must be a positive int");
+							System.out.println("Size must be positive");
 						}
 						else {
 							selecting = false;
 						}
 					}
 					catch(NumberFormatException e) {
-						System.out.println("Size must be a positive int");
-						scanner.next();
+						System.out.println("Size must be an integer");
 					}
 				}
 				
 				int[] list = new int[size];
-				for(int i = 0; i < size; i++) {
+				for (int i = 0; i < size; i++) {
+					System.out.printf("Enter item %d of %d\n", i, size);
+					
 					try {
-						System.out.printf("Enter item %d of %d\n", i, size);
-						list[i] = scanner.nextInt();
-						
+						list[i] = Integer.parseInt(input.readLine());
 					}
 					catch(NumberFormatException e) {
-						System.out.println("Item should be an int");
-						scanner.next();
+						System.out.println("Item must be an integer");
 						i--;
 					}
 				}
@@ -56,20 +55,20 @@ public class Client {
 				int delay = 0;
 				selecting = true;
 				while(selecting) {
+					System.out.println("Enter desired delay time");
+					
 					try {
-						System.out.println("Enter desired delay time");
-						delay = scanner.nextInt();
+						delay = Integer.parseInt(input.readLine());
 						
 						if(delay < 0) {
-							System.out.println("Delay should be a positive integer");
+							System.out.println("Delay must be positive");
 						}
 						else {
 							selecting = false;
 						}
 					}
 					catch(NumberFormatException e) {
-						System.out.println("Delay should be a positive integer");
-						scanner.next();
+						System.out.println("Delay must be an integer");
 					}
 				}
 				
@@ -77,9 +76,16 @@ public class Client {
 				message.put("Type", "Data");
 				message.put("List", list);
 				message.put("Delay", delay);
+				out.println(message);
 				
-				out.println(message.toString());
+				String stringResponse = in.readLine();
+				JSONObject response = new JSONObject(stringResponse);
+				System.out.println("Received response");
 				
+				if(response.getString("Type").equals("Result")) {
+					int singleSumResult = response.getInt("Single");
+					System.out.println("Result: " + singleSumResult);
+				}
 				
 			}
 		}
