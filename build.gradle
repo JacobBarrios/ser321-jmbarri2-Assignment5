@@ -11,6 +11,7 @@ task runClient(type: JavaExec) {
 
     mainClass.set("Client")
     classpath = sourceSets.main.runtimeClasspath
+    standardInput = System.in
 
     def host = project.hasProperty("Host") ? project.property("Host") : "localhost"
     def port = project.hasProperty("Port") ? project.property("Port") : '8080'
@@ -25,9 +26,10 @@ task runLeader(type: JavaExec) {
     mainClass.set("Leader")
     classpath = sourceSets.main.runtimeClasspath
 
-    def port = project.hasProperty("Port") ? project.property("Port") : '8080'
+    def Cport = project.hasProperty("CPort") ? project.property("CPort") : '8080'
+    def Nport = project.hasProperty("NPort") ? project.property("NPort") : '8081'
 
-    args port
+    args Cport, Nport
 }
 
 repositories {
@@ -42,12 +44,13 @@ task runNodes(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
 
     def host = project.hasProperty("Host") ? project.property("Host") : "localhost"
-    def port = project.hasProperty("Port") ? project.property("Port") : '8080'
+    def port = project.hasProperty("Port") ? project.property("Port") : '8081'
 
     args host, port
 }
 
 dependencies {
+    implementation 'org.json:json:20171018'
     // Implement JUnit for tests
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.9.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.9.0'
