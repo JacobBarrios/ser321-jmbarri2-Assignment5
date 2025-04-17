@@ -85,13 +85,13 @@ public class Client {
 					}
 				}
 				
-				JSONObject message = new JSONObject();
-				message.put("Type", "Data");
-				message.put("List", list);
-				message.put("Delay", delay);
+				JSONObject request = new JSONObject();
+				request.put("Type", "Data");
+				request.put("List", list);
+				request.put("Delay", delay);
 				
 				System.out.println("Sent data to leader");
-				out.println(message);
+				out.println(request);
 			}
 		}
 		catch(IOException e) {
