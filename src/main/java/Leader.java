@@ -5,34 +5,48 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+
 import java.net.ServerSocket;
 import java.net.Socket;
 
+/**
+ * Leader class handles the single sum computation, and handles communication between nodes
+ * for distributed sum calculations
+ *
+ * @author Jacob Barrios
+ * @version 1.0
+ */
 public class Leader {
+	
+	/**
+	 * Main that takes arguments from gradle run command for the client port, and the node port
+	 * Creates threads for multiple client, and include 3 nodes for Distributed sum calculations
+	 *
+	 * @param args Contains client port, and node port
+	 */
 	public static void main(String[] args) {
 		int Cport = Integer.parseInt(args[0]);
 		int Nport = Integer.parseInt(args[1]);
-		Socket client = null;
 		
 		try(ServerSocket server = new ServerSocket(Cport);
 			ServerSocket node1Server = new ServerSocket(Nport);
-			ServerSocket node2Server = new ServerSocket(Nport + 1);
-			ServerSocket node3Server = new ServerSocket(Nport + 2)) {
-			System.out.println("[DEBUG] Leader running on port: " + Cport);
-			
-			System.out.println("Waiting for node connections...");
-			Socket node1 = node1Server.accept();
-			System.out.println("Node 1 connected");
-			Socket node2 = node2Server.accept();
-			System.out.println("Node 2 connected");
-			Socket node3 = node3Server.accept();
-			System.out.println("Node 3 connected");
+			ServerSocket node2Server = new ServerSocket((Nport + 1));
+			ServerSocket node3Server = new ServerSocket((Nport + 2))) {
 			
 			while(true) {
-				System.out.println("Waiting for client connection");
-				client = server.accept();
-				System.out.println("Connected to client");
+				System.out.println("[DEBUG] Waiting for node connections...");
+				Socket node1 = node1Server.accept();
+				System.out.println("[DEBUG] Node 1 connected");
+				Socket node2 = node2Server.accept();
+				System.out.println("[DEBUG] Node 2 connected");
+				Socket node3 = node3Server.accept();
+				System.out.println("[DEBUG] Node 3 connected");
 				
+				System.out.println("[DEBUG] Waiting for client connection");
+				Socket client = server.accept();
+				System.out.println("[DEBUG] Connected to client");
+				
+				// Start new Leader thread for new client
 				LeaderThread leaderThread = new LeaderThread(client, node1, node2, node3);
 				leaderThread.start();
 			}
@@ -43,14 +57,22 @@ public class Leader {
 	}
 }
 
+/**
+ * Represents the thread for each client to handle single sum calculations
+ * Handles result of Single and Distributed sum calculations
+ */
 class LeaderThread extends Thread {
 	private final Socket client;
 	private final Socket node1, node2, node3;
 	
-	private PrintWriter outClient;
-	
-	private BufferedReader inClient;
-	
+	/**
+	 * Create a new instance of LeaderThread
+	 *
+	 * @param client Socket of client
+	 * @param node1 Socket of node 1
+	 * @param node2 Socket of node 2
+	 * @param node3 Socket of node 3
+	 */
 	public LeaderThread(Socket client, Socket node1, Socket node2, Socket node3) {
 		this.client = client;
 		this.node1 = node1;
@@ -58,34 +80,39 @@ class LeaderThread extends Thread {
 		this.node3 = node3;
 	}
 	
+	/**
+	 * Runs the LeaderThread class
+	 */
 	public void run() {
-		try {
-			// Set up client communication streams
-			outClient = new PrintWriter(client.getOutputStream(), true);
-			inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
-		
+		try (PrintWriter outClient = new PrintWriter(client.getOutputStream(), true);
+			 BufferedReader inClient = new BufferedReader(new InputStreamReader(client.getInputStream()))
+		) {
+			// Sends start response to Client
 			JSONObject response = new JSONObject();
 			response.put("Type", "Start");
 			response.put("Message", "Connected to server");
 			outClient.println(response);
-			System.out.println("Sent start message");
+			System.out.println("[DEBUG] Sent start message");
 			
 			while(true) {
+				// Receive request from Client
 				String stringRequest = inClient.readLine();
 				JSONObject clientRequest = new JSONObject(stringRequest);
 				JSONArray arrayDataList = clientRequest.getJSONArray("List");
 				ClientData clientData = new ClientData(convertJSONArray(arrayDataList), clientRequest.getInt("Delay"));
-				System.out.println("Received client data");
+				System.out.println("[DEBUG] Received client data");
 
+				// Single sum result
 				int singleSumResult = singleSum(clientData);
-				System.out.println("Single sum calculations: " + singleSumResult);
+				System.out.println("[DEBUG] Single sum calculations: " + singleSumResult);
 				
+				System.out.println("[DEBUG] Start of Distributed calculations");
 				int[] clientDataList = clientData.getDataList();
 				int partialSize = clientDataList.length / 3;
 				
 				int[] part1 = new int[partialSize];
 				int[] part2 = new int[partialSize];
-				int[] part3 = new int[clientDataList.length - 2 * partialSize];
+				int[] part3 = new int[clientDataList.length - (2 * partialSize)];
 				
 				System.arraycopy(clientDataList, 0, part1, 0, partialSize);
 				System.arraycopy(clientDataList, partialSize, part2, 0, partialSize);
@@ -96,40 +123,58 @@ class LeaderThread extends Thread {
 				Thread node3Thread = new NodesThread(node3, part3, 3, clientData);
 				
 				node1Thread.start(); node2Thread.start(); node3Thread.start();
-				node1Thread.join(); node2Thread.join(); node3Thread.join();
+				System.out.println("[DEBUG] Started threads");
+				try {
+					node1Thread.join(); node2Thread.join(); node3Thread.join();
+					System.out.println("[DEBUG] Threads finished");
+				}
+				catch(InterruptedException e) {
+					System.out.println("[DEBUG] Node thread interrupted");
+				}
 				
+				// Distributed sum result
 				int distributedResult = clientData.computeDistributeResult();
+				System.out.println("[DEBUG] Calculated distributed result");
 				
+				// Builds and sends the response with the result
 				response = new JSONObject();
 				response.put("Type", "Result");
 				response.put("Single", singleSumResult);
 				response.put("Distributed", distributedResult);
-				
 				outClient.println(response);
-				System.out.println("Sent results");
+				System.out.println("[DEBUG] Sent results");
 			
 			}
 		}
 		catch (IOException e) {
 			System.out.println("Error initializing client I/O streams");
 		}
-		catch(InterruptedException e) {
-			System.out.println("Error node thread interrupted");
-		}
 	}
 	
+	/**
+	 * Method to handle the single sum calculations
+	 *
+	 * @param clientData Class that holds the list of data
+	 * @return Result of calculations
+	 */
 	public int singleSum(ClientData clientData) {
 		int[] dataList = clientData.getDataList();
 		int sum = 0;
 		
-		for(int i = 0; i < dataList.length; i++) {
-			sum += dataList[i];
+		for(int j : dataList) {
+			sum += j;
 		}
 		
 		return sum;
 		
 	}
 	
+	/**
+	 * Converts the giving JSONArray into int[]
+	 *
+	 * @param JSONList List sent from client
+	 * @return new int[] list
+	 */
 	public int[] convertJSONArray(JSONArray JSONList) {
 		int[] dataList = new int[JSONList.length()];
 		
@@ -142,12 +187,24 @@ class LeaderThread extends Thread {
 	}
 }
 
+/**
+ * Represents the thread for each node to handle distributed sum calculations
+ * Sends data to 3 nodes for distribute sum calculations
+ */
 class NodesThread extends Thread {
 	private final Socket node;
 	private final int[] partialDataList;
 	private final int nodeNumber;
 	private final ClientData clientData;
 	
+	/**
+	 * Creates a new instance of NodesThread
+	 *
+	 * @param node Socket of node
+	 * @param partialDataList Partial list of data
+	 * @param nodeNumber Number of the node
+	 * @param clientData Class that holds all the data
+	 */
 	NodesThread(Socket node, int[] partialDataList, int nodeNumber, ClientData clientData) {
 		this.node = node;
 		this.partialDataList = partialDataList;
@@ -155,16 +212,20 @@ class NodesThread extends Thread {
 		this.clientData = clientData;
 	}
 	
+	/**
+	 * Runs the NodesThread class
+	 */
 	public void run() {
 		try {
-			PrintWriter outNode = new PrintWriter(node.getOutputStream());
+			PrintWriter outNode = new PrintWriter(node.getOutputStream(), true);
 			BufferedReader inNode = new BufferedReader(new InputStreamReader(node.getInputStream()));
-		
+			
 			JSONObject computation = new JSONObject();
 			computation.put("Type", "Data");
 			computation.put("List", partialDataList);
 			computation.put("Delay", clientData.getDelay());
 			outNode.println(computation);
+			System.out.println("[DEBUG] Sent data to Node " + nodeNumber);
 			
 			String stringResult = inNode.readLine();
 			JSONObject result = new JSONObject(stringResult);
@@ -177,6 +238,9 @@ class NodesThread extends Thread {
 	}
 }
 
+/**
+ * This class represents the shared data between Leader and Nodes
+ */
 class ClientData {
 	private int[] dataList;
 	private int delay;
@@ -184,6 +248,11 @@ class ClientData {
 	private int result2;
 	private int result3;
 	
+	/**
+	 * Creates a new instance of ClientData
+	 * @param dataList
+	 * @param delay
+	 */
 	public ClientData(int[] dataList, int delay) {
 		this.dataList = dataList;
 		this.delay = delay;
@@ -221,7 +290,5 @@ class ClientData {
 		}
 	}
 	
-	public int computeDistributeResult() {
-		return result1 + result2 + result3;
-	}
+	public int computeDistributeResult() {return result1 + result2 + result3;}
 }
