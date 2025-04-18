@@ -101,53 +101,46 @@ class LeaderThread extends Thread {
 				JSONArray arrayDataList = clientRequest.getJSONArray("List");
 				ClientData clientData = new ClientData(convertJSONArray(arrayDataList), clientRequest.getInt("Delay"));
 				System.out.println("[DEBUG] Received client data");
-
+				
 				// Single sum result
+				long singleStartTime = System.nanoTime();
 				int singleSumResult = singleSum(clientData);
+				long singleEndTime = System.nanoTime();
+				int singleTotalTimeSeconds = (int)((singleEndTime - singleStartTime) / 1000000000);
 				System.out.println("[DEBUG] Single sum calculations: " + singleSumResult);
-				
-				System.out.println("[DEBUG] Start of Distributed calculations");
-				int[] clientDataList = clientData.getDataList();
-				int partialSize = clientDataList.length / 3;
-				
-				int[] part1 = new int[partialSize];
-				int[] part2 = new int[partialSize];
-				int[] part3 = new int[clientDataList.length - (2 * partialSize)];
-				
-				System.arraycopy(clientDataList, 0, part1, 0, partialSize);
-				System.arraycopy(clientDataList, partialSize, part2, 0, partialSize);
-				System.arraycopy(clientDataList, 2 * partialSize, part3, 0, part3.length);
-				
-				Thread node1Thread = new NodesThread(node1, part1, 1, clientData);
-				Thread node2Thread = new NodesThread(node2, part2, 2, clientData);
-				Thread node3Thread = new NodesThread(node3, part3, 3, clientData);
-				
-				node1Thread.start(); node2Thread.start(); node3Thread.start();
-				System.out.println("[DEBUG] Started threads");
-				try {
-					node1Thread.join(); node2Thread.join(); node3Thread.join();
-					System.out.println("[DEBUG] Threads finished");
-				}
-				catch(InterruptedException e) {
-					System.out.println("[DEBUG] Node thread interrupted");
-				}
+				System.out.printf("[DEBUG] Single sum total time: %d s\n", singleTotalTimeSeconds);
 				
 				// Distributed sum result
-				int distributedResult = clientData.computeDistributeResult();
-				System.out.println("[DEBUG] Calculated distributed result");
+				long distributedStartTime = System.nanoTime();
+				int distributedSumResult = distributedSum(clientData, node1, node2, node3);
+				long distributedEndTime = System.nanoTime();
+				int distributedTotalTimeSeconds = (int)((distributedEndTime - distributedStartTime) / 1000000000);
+				System.out.printf("[DEBUG] Distributed sum calculations: %d s\n", distributedSumResult);
+				System.out.printf("[DEBUG] Distributed sum total time: %d s\n", distributedTotalTimeSeconds);
+				
+				
+				// Print time comparison
+				System.out.printf("Single sum time: %d, Distributed sum time: %d", singleTotalTimeSeconds, distributedTotalTimeSeconds);
+				
+				// TODO Add consensus logic
 				
 				// Builds and sends the response with the result
 				response = new JSONObject();
 				response.put("Type", "Result");
 				response.put("Single", singleSumResult);
-				response.put("Distributed", distributedResult);
+				response.put("Distributed", distributedSumResult);
+				response.put("SingleTime", singleTotalTimeSeconds);
+				response.put("DistributedTime", distributedTotalTimeSeconds);
 				outClient.println(response);
 				System.out.println("[DEBUG] Sent results");
 			
 			}
 		}
-		catch (IOException e) {
+		catch(IOException e) {
 			System.out.println("Error initializing client I/O streams");
+		}
+		catch(NullPointerException e) {
+			System.out.println("Response from client is null");
 		}
 	}
 	
@@ -160,12 +153,49 @@ class LeaderThread extends Thread {
 	public int singleSum(ClientData clientData) {
 		int[] dataList = clientData.getDataList();
 		int sum = 0;
+		int seconds = clientData.getDelay();
 		
-		for(int j : dataList) {
-			sum += j;
+		try {
+			for(int j : dataList) {
+				sum += j;
+				
+				Thread.sleep(seconds);
+			}
+		}
+		catch(InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 		
 		return sum;
+		
+	}
+	
+	public int distributedSum(ClientData clientData, Socket node1, Socket node2, Socket node3) {
+		int[] clientDataList = clientData.getDataList();
+		int partialSize = clientDataList.length / 3;
+		int[] part1 = new int[partialSize];
+		int[] part2 = new int[partialSize];
+		int[] part3 = new int[clientDataList.length - (2 * partialSize)];
+		
+		System.arraycopy(clientDataList, 0, part1, 0, partialSize);
+		System.arraycopy(clientDataList, partialSize, part2, 0, partialSize);
+		System.arraycopy(clientDataList, 2 * partialSize, part3, 0, part3.length);
+		
+		Thread node1Thread = new NodesThread(node1, part1, 1, clientData);
+		Thread node2Thread = new NodesThread(node2, part2, 2, clientData);
+		Thread node3Thread = new NodesThread(node3, part3, 3, clientData);
+		
+		node1Thread.start(); node2Thread.start(); node3Thread.start();
+		System.out.println("[DEBUG] Started threads");
+		try {
+			node1Thread.join(); node2Thread.join(); node3Thread.join();
+			System.out.println("[DEBUG] Threads finished");
+		}
+		catch(InterruptedException e) {
+			System.out.println("[DEBUG] Node thread interrupted");
+		}
+		
+		return clientData.computeDistributeResult();
 		
 	}
 	

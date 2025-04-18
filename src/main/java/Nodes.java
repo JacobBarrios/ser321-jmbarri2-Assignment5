@@ -37,9 +37,11 @@ public class Nodes {
 					JSONObject computation = new JSONObject(stringComputation);
 					JSONArray arrayDataList = computation.getJSONArray("List");
 					int[] partialDataList = convertJSONArray(arrayDataList);
+					int delay = computation.getInt("Delay");
 					System.out.println("[DEBUG] Received data from Leader");
 					
-					int sum = calculateSum(partialDataList);
+					// Starts calculating the sum of the given list
+					int sum = calculateSum(partialDataList, delay);
 					System.out.println("[DEBUG] Result: " + sum);
 					
 					JSONObject result = new JSONObject();
@@ -80,13 +82,22 @@ public class Nodes {
 	 * Calculates the sum of the partialDataList
 	 *
 	 * @param partialDataList List of integers for calculation
+	 * @param delay Delay between each computation
 	 * @return Sum of the partial list
 	 */
-	public static int calculateSum(int[] partialDataList) {
+	public static int calculateSum(int[] partialDataList, int delay) {
 		int sum = 0;
-		
-		for(int j : partialDataList) {
-			sum += j;
+		// Convert delay into seconds
+		int seconds = delay * 1000;
+		try {
+			for(int j : partialDataList) {
+				sum += j;
+				
+				Thread.sleep(seconds);
+			}
+		}
+		catch(InterruptedException e) {
+			throw new RuntimeException(e);
 		}
 		
 		return sum;

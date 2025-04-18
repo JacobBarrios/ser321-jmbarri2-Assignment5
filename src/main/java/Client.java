@@ -46,8 +46,12 @@ public class Client {
 				else if(response.getString("Type").equals("Result")) {
 					int singleSumResult = response.getInt("Single");
 					int distributedSumResult = response.getInt("Distributed");
+					int singleTime = response.getInt("SingleTime");
+					int distributedTime = response.getInt("DistributedTime");
 					System.out.println("Single: " + singleSumResult);
 					System.out.println("Distributed: " + distributedSumResult);
+					System.out.println("Single Time: " + singleTime);
+					System.out.println("Distributed Time: " + distributedTime);
 				}
 				
 				// Get the desired size of the array
