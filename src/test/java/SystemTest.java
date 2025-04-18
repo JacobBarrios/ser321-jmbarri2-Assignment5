@@ -153,6 +153,8 @@ public class SystemTest {
 			System.out.println("Single Time: " + singleTime);
 			System.out.println("Distributed Time: " + distributedTime);
 			
+			assertNotEquals(singleSumResult, distributedSumResult);
+			
 			tearDown();
 			
 		}
