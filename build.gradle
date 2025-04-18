@@ -5,6 +5,7 @@ plugins {
     id "application"
 }
 
+// gradle runClient -PHost=localhost -PPort=8080
 task runClient(type: JavaExec) {
     group = "Client"
     description = "Run the client class"
@@ -19,6 +20,7 @@ task runClient(type: JavaExec) {
     args host, port
 }
 
+// gradle runLeader -PCport=8080 -PNPort=8081
 task runLeader(type: JavaExec) {
     group = "Leader"
     description = "Run the leader class"
@@ -36,6 +38,7 @@ repositories {
     mavenCentral()
 }
 
+// gradle runNodes -PHost=localhost -PPort=8081
 task runNodes(type: JavaExec) {
     group = "Nodes"
     description = "Run the nodes class"
@@ -45,8 +48,9 @@ task runNodes(type: JavaExec) {
 
     def host = project.hasProperty("Host") ? project.property("Host") : "localhost"
     def port = project.hasProperty("Port") ? project.property("Port") : '8081'
+    def fault = project.hasProperty("Fault") ? project.property("Fault") : false
 
-    args host, port
+    args host, port, fault;
 }
 
 dependencies {

@@ -8,6 +8,8 @@ import java.io.PrintWriter;
 
 import java.net.Socket;
 
+import java.util.Random;
+
 /**
  * Nodes class handles the distributed sum calculations
  *
@@ -24,6 +26,8 @@ public class Nodes {
 	public static void main(String[] args) {
 		String host = args[0];
 		int port = Integer.parseInt(args[1]);
+		boolean fault = Boolean.parseBoolean(args[2]);
+		Random randomNumber = new Random();
 		System.out.println("[DEBUG] Port used: " + port);
 		
 		try(Socket server = new Socket(host, port);
@@ -43,6 +47,11 @@ public class Nodes {
 					// Starts calculating the sum of the given list
 					int sum = calculateSum(partialDataList, delay);
 					System.out.println("[DEBUG] Result: " + sum);
+					
+					// Simulates faulty node
+					if(fault) {
+						sum += randomNumber.nextInt(20 - 1 + 1) + 1;
+					}
 					
 					JSONObject result = new JSONObject();
 					result.put("Type", "Result");
