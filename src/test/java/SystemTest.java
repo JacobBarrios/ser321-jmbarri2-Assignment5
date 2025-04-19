@@ -144,16 +144,8 @@ public class SystemTest {
 			// Read response
 			String stringResponse = inClient.readLine();
 			JSONObject response = new JSONObject(stringResponse);
-			int singleSumResult = response.getInt("Single");
-			int distributedSumResult = response.getInt("Distributed");
-			int singleTime = response.getInt("SingleTime");
-			int distributedTime = response.getInt("DistributedTime");
-			System.out.println("Single sum: " + singleSumResult);
-			System.out.println("Distributed sum: " + distributedSumResult);
-			System.out.println("Single Time: " + singleTime);
-			System.out.println("Distributed Time: " + distributedTime);
 			
-			assertNotEquals(singleSumResult, distributedSumResult);
+			assertEquals(response.getString("Type"), "Error");
 			
 			tearDown();
 			

@@ -43,6 +43,9 @@ public class Client {
 				if(response.getString("Type").equals("Start")) {
 					System.out.println("Message: " + response.getString("Message"));
 				}
+				else if(response.getString("Type").equals("Error")) {
+					System.out.println("Error message: " + response.getString("Message"));
+				}
 				else if(response.getString("Type").equals("Result")) {
 					int singleSumResult = response.getInt("Single");
 					int distributedSumResult = response.getInt("Distributed");

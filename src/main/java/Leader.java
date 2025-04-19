@@ -84,9 +84,10 @@ class LeaderThread extends Thread {
 	 * Runs the LeaderThread class
 	 */
 	public void run() {
-		try (PrintWriter outClient = new PrintWriter(client.getOutputStream(), true);
-			 BufferedReader inClient = new BufferedReader(new InputStreamReader(client.getInputStream()))
-		) {
+		try {
+			PrintWriter outClient = new PrintWriter(client.getOutputStream(), true);
+			BufferedReader inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			
 			// Sends start response to Client
 			JSONObject response = new JSONObject();
 			response.put("Type", "Start");
@@ -122,18 +123,24 @@ class LeaderThread extends Thread {
 				// Print time comparison
 				System.out.printf("Single sum time: %d, Distributed sum time: %d", singleTotalTimeSeconds, distributedTotalTimeSeconds);
 				
-				// TODO Add consensus logic
+				boolean consensusCheck = computationConsensus(clientData, node1, node3, node3);
 				
 				// Builds and sends the response with the result
 				response = new JSONObject();
-				response.put("Type", "Result");
-				response.put("Single", singleSumResult);
-				response.put("Distributed", distributedSumResult);
-				response.put("SingleTime", singleTotalTimeSeconds);
-				response.put("DistributedTime", distributedTotalTimeSeconds);
+				if(consensusCheck) {
+					response.put("Type", "Result");
+					response.put("Single", singleSumResult);
+					response.put("Distributed", distributedSumResult);
+					response.put("SingleTime", singleTotalTimeSeconds);
+					response.put("DistributedTime", distributedTotalTimeSeconds);
+				}
+				else {
+					response.put("Type", "Error");
+					response.put("Message", "Error with computation");
+				}
+				
 				outClient.println(response);
-				System.out.println("[DEBUG] Sent results");
-			
+				System.out.println("[DEBUG] Sent response");
 			}
 		}
 		catch(IOException e) {
@@ -142,6 +149,65 @@ class LeaderThread extends Thread {
 		catch(NullPointerException e) {
 			System.out.println("Response from client is null");
 		}
+	}
+	
+	public boolean computationConsensus(ClientData clientData, Socket node1, Socket node2, Socket node3) {
+		int[] clientDataList = clientData.getDataList();
+		int partialSize = clientDataList.length / 3;
+		int[] part1 = new int[partialSize];
+		int[] part2 = new int[partialSize];
+		int[] part3 = new int[clientDataList.length - (2 * partialSize)];
+		
+		System.arraycopy(clientDataList, 0, part1, 0, partialSize);
+		System.arraycopy(clientDataList, partialSize, part2, 0, partialSize);
+		System.arraycopy(clientDataList, 2 * partialSize, part3, 0, part3.length);
+		
+		// Sends that this is a consensus check, and passes different parts, with the corresponding nodeNumber
+		Thread node1Thread = new NodesThread(node1, part2, 2, clientData, true);
+		Thread node2Thread = new NodesThread(node2, part3, 3, clientData, true);
+		Thread node3Thread = new NodesThread(node3, part1, 1, clientData, true);
+		
+		node1Thread.start(); node2Thread.start(); node3Thread.start();
+		System.out.println("[DEBUG] Started consensus threads");
+		try {
+			node1Thread.join(); node2Thread.join(); node3Thread.join();
+			System.out.println("[DEBUG] Consensus threads finished");
+		}
+		catch(InterruptedException e) {
+			System.out.println("[DEBUG] Node thread interrupted");
+		}
+		
+		return clientData.getConsensus();
+		
+	}
+	
+	public int distributedSum(ClientData clientData, Socket node1, Socket node2, Socket node3) {
+		int[] clientDataList = clientData.getDataList();
+		int partialSize = clientDataList.length / 3;
+		int[] part1 = new int[partialSize];
+		int[] part2 = new int[partialSize];
+		int[] part3 = new int[clientDataList.length - (2 * partialSize)];
+		
+		System.arraycopy(clientDataList, 0, part1, 0, partialSize);
+		System.arraycopy(clientDataList, partialSize, part2, 0, partialSize);
+		System.arraycopy(clientDataList, 2 * partialSize, part3, 0, part3.length);
+		
+		Thread node1Thread = new NodesThread(node1, part1, 1, clientData, false);
+		Thread node2Thread = new NodesThread(node2, part2, 2, clientData, false);
+		Thread node3Thread = new NodesThread(node3, part3, 3, clientData, false);
+		
+		node1Thread.start(); node2Thread.start(); node3Thread.start();
+		System.out.println("[DEBUG] Started threads");
+		try {
+			node1Thread.join(); node2Thread.join(); node3Thread.join();
+			System.out.println("[DEBUG] Threads finished");
+		}
+		catch(InterruptedException e) {
+			System.out.println("[DEBUG] Node thread interrupted");
+		}
+		
+		return clientData.computeDistributeResult();
+		
 	}
 	
 	/**
@@ -167,35 +233,6 @@ class LeaderThread extends Thread {
 		}
 		
 		return sum;
-		
-	}
-	
-	public int distributedSum(ClientData clientData, Socket node1, Socket node2, Socket node3) {
-		int[] clientDataList = clientData.getDataList();
-		int partialSize = clientDataList.length / 3;
-		int[] part1 = new int[partialSize];
-		int[] part2 = new int[partialSize];
-		int[] part3 = new int[clientDataList.length - (2 * partialSize)];
-		
-		System.arraycopy(clientDataList, 0, part1, 0, partialSize);
-		System.arraycopy(clientDataList, partialSize, part2, 0, partialSize);
-		System.arraycopy(clientDataList, 2 * partialSize, part3, 0, part3.length);
-		
-		Thread node1Thread = new NodesThread(node1, part1, 1, clientData);
-		Thread node2Thread = new NodesThread(node2, part2, 2, clientData);
-		Thread node3Thread = new NodesThread(node3, part3, 3, clientData);
-		
-		node1Thread.start(); node2Thread.start(); node3Thread.start();
-		System.out.println("[DEBUG] Started threads");
-		try {
-			node1Thread.join(); node2Thread.join(); node3Thread.join();
-			System.out.println("[DEBUG] Threads finished");
-		}
-		catch(InterruptedException e) {
-			System.out.println("[DEBUG] Node thread interrupted");
-		}
-		
-		return clientData.computeDistributeResult();
 		
 	}
 	
@@ -226,6 +263,7 @@ class NodesThread extends Thread {
 	private final int[] partialDataList;
 	private final int nodeNumber;
 	private final ClientData clientData;
+	private final boolean consensus;
 	
 	/**
 	 * Creates a new instance of NodesThread
@@ -235,31 +273,51 @@ class NodesThread extends Thread {
 	 * @param nodeNumber Number of the node
 	 * @param clientData Class that holds all the data
 	 */
-	NodesThread(Socket node, int[] partialDataList, int nodeNumber, ClientData clientData) {
+	NodesThread(Socket node, int[] partialDataList, int nodeNumber, ClientData clientData, boolean consensus) {
 		this.node = node;
 		this.partialDataList = partialDataList;
 		this.nodeNumber = nodeNumber;
 		this.clientData = clientData;
+		this.consensus = consensus;
 	}
 	
 	/**
 	 * Runs the NodesThread class
 	 */
 	public void run() {
+		// TODO add if statement for checkingConsensus
+		
 		try {
 			PrintWriter outNode = new PrintWriter(node.getOutputStream(), true);
 			BufferedReader inNode = new BufferedReader(new InputStreamReader(node.getInputStream()));
 			
-			JSONObject computation = new JSONObject();
-			computation.put("Type", "Data");
-			computation.put("List", partialDataList);
-			computation.put("Delay", clientData.getDelay());
-			outNode.println(computation);
-			System.out.println("[DEBUG] Sent data to Node " + nodeNumber);
+			JSONObject request = new JSONObject();
 			
-			String stringResult = inNode.readLine();
-			JSONObject result = new JSONObject(stringResult);
-			clientData.setResult(result.getInt("Result"), this.nodeNumber);
+			if(!consensus) {
+				request.put("Type", "Data");
+				request.put("List", partialDataList);
+				request.put("Delay", clientData.getDelay());
+				System.out.println("[DEBUG] Sent data to Node " + nodeNumber);
+			}
+			else {
+				request.put("Type", "Consensus");
+				request.put("List", partialDataList);
+				request.put("Delay", clientData.getDelay());
+				request.put("Sum", clientData.getResult(nodeNumber));
+				System.out.println("[DEBUG] Sent consensus from Node " + nodeNumber);
+			}
+			
+			outNode.println(request);
+			
+			
+			String stringResponse = inNode.readLine();
+			JSONObject response = new JSONObject(stringResponse);
+			if(response.get("Type").equals("Result")) {
+				clientData.setResult(response.getInt("Result"), this.nodeNumber);
+			}
+			else if(response.get("Type").equals("Consensus")) {
+				clientData.setConsensus(response.getBoolean("Consensus"), this.nodeNumber);
+			}
 		}
 		catch(IOException e) {
 			System.out.println("Connection error");
@@ -277,6 +335,9 @@ class ClientData {
 	private int result1;
 	private int result2;
 	private int result3;
+	private boolean consensus1;
+	private boolean consensus2;
+	private boolean consensus3;
 	
 	/**
 	 * Creates a new instance of ClientData
@@ -288,37 +349,53 @@ class ClientData {
 		this.delay = delay;
 	}
 	
-	public int[] getDataList() {return dataList;}
+	public int[] getDataList() {return this.dataList;}
 	
 	public void setDataList(int[] dataList) {this.dataList = dataList;}
 	
-	public int getDelay() {return delay;}
+	public int getDelay() {return this.delay;}
 	
 	public void setDelay(int delay) {this.delay = delay;}
 	
 	public int getResult(int nodeNumber) {
 		if(nodeNumber == 1) {
-			return result1;
+			return this.result1;
 		}
 		else if(nodeNumber == 2) {
-			return result2;
+			return this.result2;
 		}
 		else {
-			return result3;
+			return this.result3;
 		}
 	}
 	
 	public void setResult(int result, int nodeNumber) {
 		if(nodeNumber == 1) {
-			result1 = result;
+			this.result1 = result;
 		}
 		else if(nodeNumber == 2) {
-			result2 = result;
+			this.result2 = result;
 		}
 		else {
-			result3 = result;
+			this.result3 = result;
 		}
 	}
 	
-	public int computeDistributeResult() {return result1 + result2 + result3;}
+	public void setConsensus(boolean consensus, int nodeNumber) {
+		if(nodeNumber == 1) {
+			this.consensus1 = consensus;
+		}
+		else if(nodeNumber == 2) {
+			this.consensus2 = consensus;
+		}
+		else {
+			this.consensus3 = consensus;
+		}
+	}
+	
+	public boolean getConsensus() {
+		return this.consensus1 && this.consensus2 && this.consensus3;
+	}
+	
+	public int computeDistributeResult() {return this.result1 + this.result2 + this.result3;}
 }

@@ -38,7 +38,7 @@ repositories {
     mavenCentral()
 }
 
-// gradle runNodes -PHost=localhost -PPort=8081
+// gradle runNodes -PHost=localhost -PPort=8081 -PFault=false
 task runNodes(type: JavaExec) {
     group = "Nodes"
     description = "Run the nodes class"

@@ -27,37 +27,42 @@ public class Nodes {
 		String host = args[0];
 		int port = Integer.parseInt(args[1]);
 		boolean fault = Boolean.parseBoolean(args[2]);
-		Random randomNumber = new Random();
 		System.out.println("[DEBUG] Port used: " + port);
 		
-		try(Socket server = new Socket(host, port);
+		try {
+			Socket server = new Socket(host, port);
 			PrintWriter out = new PrintWriter(server.getOutputStream(), true);
-			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()))) {
+			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()));
+			
 			System.out.println("[DEBUG] Connected to Leader");
 			
 			while(true) {
 				try {
-					String stringComputation = in.readLine();
-					JSONObject computation = new JSONObject(stringComputation);
-					JSONArray arrayDataList = computation.getJSONArray("List");
+					String stringRequest = in.readLine();
+					JSONObject request = new JSONObject(stringRequest);
+					JSONArray arrayDataList = request.getJSONArray("List");
 					int[] partialDataList = convertJSONArray(arrayDataList);
-					int delay = computation.getInt("Delay");
+					int delay = request.getInt("Delay");
 					System.out.println("[DEBUG] Received data from Leader");
 					
 					// Starts calculating the sum of the given list
-					int sum = calculateSum(partialDataList, delay);
+					int sum = calculateSum(partialDataList, delay, fault);
 					System.out.println("[DEBUG] Result: " + sum);
 					
-					// Simulates faulty node
-					if(fault) {
-						sum += randomNumber.nextInt(20 - 1 + 1) + 1;
-					}
-					
 					JSONObject result = new JSONObject();
-					result.put("Type", "Result");
-					result.put("Result", sum);
-					out.println(result);
-					System.out.println("[DEBUG] Sent result to Leader");
+					if(request.get("Type").equals("Data")) {
+						result.put("Type", "Result");
+						result.put("Result", sum);
+						out.println(result);
+						System.out.println("[DEBUG] Sent result to Leader");
+					}
+					else if(request.get("Type").equals("Consensus")) {
+						result.put("Type", "Consensus");
+						result.put("Result", sum);
+						result.put("Consensus", sum == request.getInt("Sum"));
+						out.println(result);
+						System.out.println("[DEBUG] Sent consensus to Leader");
+					}
 				}
 				catch(IOException e) {
 					System.out.println("Error reading response");
@@ -94,8 +99,10 @@ public class Nodes {
 	 * @param delay Delay between each computation
 	 * @return Sum of the partial list
 	 */
-	public static int calculateSum(int[] partialDataList, int delay) {
+	public static int calculateSum(int[] partialDataList, int delay, boolean fault) {
 		int sum = 0;
+		Random randomNumber = new Random();
+		
 		// Convert delay into seconds
 		int seconds = delay * 1000;
 		try {
@@ -103,6 +110,11 @@ public class Nodes {
 				sum += j;
 				
 				Thread.sleep(seconds);
+			}
+			
+			// Simulates faulty node
+			if(fault) {
+				sum += randomNumber.nextInt(20 - 1 + 1) + 1;
 			}
 		}
 		catch(InterruptedException e) {
