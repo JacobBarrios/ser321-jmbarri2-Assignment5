@@ -29,10 +29,14 @@ public class Nodes {
 		boolean fault = Boolean.parseBoolean(args[2]);
 		System.out.println("[DEBUG] Port used: " + port);
 		
+		Socket server = null;
+		PrintWriter out = null;
+		BufferedReader in = null;
+		
 		try {
-			Socket server = new Socket(host, port);
-			PrintWriter out = new PrintWriter(server.getOutputStream(), true);
-			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()));
+			server = new Socket(host, port);
+			out = new PrintWriter(server.getOutputStream(), true);
+			in = new BufferedReader(new InputStreamReader(server.getInputStream()));
 			
 			System.out.println("[DEBUG] Connected to Leader");
 			
@@ -72,6 +76,16 @@ public class Nodes {
 		}
 		catch(IOException e) {
 			throw new RuntimeException(e);
+		}
+		finally {
+			// Ensure resources are closed
+			try {
+				if (in != null) {in.close();}
+				if (out != null) {out.close();}
+				if (server != null) {server.close();}
+			} catch (IOException e) {
+				System.out.println("Error closing resources: " + e.getMessage());
+			}
 		}
 	}
 	

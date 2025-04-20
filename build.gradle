@@ -20,7 +20,7 @@ task runClient(type: JavaExec) {
     args host, port
 }
 
-// gradle runLeader -PCport=8080 -PNPort=8081
+// gradle runLeader -PCPort=8080 -PNPort=8081
 task runLeader(type: JavaExec) {
     group = "Leader"
     description = "Run the leader class"

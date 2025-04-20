@@ -27,23 +27,33 @@ public class Leader {
 	public static void main(String[] args) {
 		int Cport = Integer.parseInt(args[0]);
 		int Nport = Integer.parseInt(args[1]);
+		ServerSocket server = null;
+		ServerSocket node1Server = null;
+		ServerSocket node2Server = null;
+		ServerSocket node3Server = null;
 		
-		try(ServerSocket server = new ServerSocket(Cport);
-			ServerSocket node1Server = new ServerSocket(Nport);
-			ServerSocket node2Server = new ServerSocket((Nport + 1));
-			ServerSocket node3Server = new ServerSocket((Nport + 2))) {
+		Socket node1 = null;
+		Socket node2 = null;
+		Socket node3 = null;
+		Socket client = null;
+		
+		try {
+			server = new ServerSocket(Cport);
+			node1Server = new ServerSocket(Nport);
+			node2Server = new ServerSocket((Nport + 1));
+			node3Server = new ServerSocket((Nport + 2));
 			
 			while(true) {
 				System.out.println("[DEBUG] Waiting for node connections...");
-				Socket node1 = node1Server.accept();
+				node1 = node1Server.accept();
 				System.out.println("[DEBUG] Node 1 connected");
-				Socket node2 = node2Server.accept();
+				node2 = node2Server.accept();
 				System.out.println("[DEBUG] Node 2 connected");
-				Socket node3 = node3Server.accept();
+				node3 = node3Server.accept();
 				System.out.println("[DEBUG] Node 3 connected");
 				
 				System.out.println("[DEBUG] Waiting for client connection");
-				Socket client = server.accept();
+				client = server.accept();
 				System.out.println("[DEBUG] Connected to client");
 				
 				// Start new Leader thread for new client
@@ -53,6 +63,22 @@ public class Leader {
 		}
 		catch (IOException e) {
 			System.out.println("Connection error");
+		}
+		finally {
+			try {
+				if(server != null) {server.close();}
+				if(node1Server != null) {node1Server.close();}
+				if(node2Server != null) {node2Server.close();}
+				if(node3Server != null) {node3Server.close();}
+				if(node1 != null) {node1.close();}
+				if(node2 != null) {node2.close();}
+				if(node3 != null) {node3.close();}
+				if(client != null) {client.close();}
+				
+			}
+			catch(IOException e){
+				throw new RuntimeException(e);
+			}
 		}
 	}
 }
@@ -84,9 +110,12 @@ class LeaderThread extends Thread {
 	 * Runs the LeaderThread class
 	 */
 	public void run() {
+		PrintWriter outClient = null;
+		BufferedReader inClient = null;
+		
 		try {
-			PrintWriter outClient = new PrintWriter(client.getOutputStream(), true);
-			BufferedReader inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			outClient = new PrintWriter(client.getOutputStream(), true);
+			inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			
 			// Sends start response to Client
 			JSONObject response = new JSONObject();
@@ -123,7 +152,7 @@ class LeaderThread extends Thread {
 				// Print time comparison
 				System.out.printf("Single sum time: %d, Distributed sum time: %d", singleTotalTimeSeconds, distributedTotalTimeSeconds);
 				
-				boolean consensusCheck = computationConsensus(clientData, node1, node3, node3);
+				boolean consensusCheck = computationConsensus(clientData, node1, node2, node3);
 				
 				// Builds and sends the response with the result
 				response = new JSONObject();
@@ -148,6 +177,14 @@ class LeaderThread extends Thread {
 		}
 		catch(NullPointerException e) {
 			System.out.println("Response from client is null");
+		}
+		// Ensure proper cleanup of resources
+		try {
+			if (inClient != null) inClient.close();
+			if (outClient != null) outClient.close();
+			System.out.println("[DEBUG] Resources closed successfully.");
+		} catch (IOException e) {
+			System.out.println("[DEBUG] Error during shutdown: " + e.getMessage());
 		}
 	}
 	
@@ -285,14 +322,15 @@ class NodesThread extends Thread {
 	 * Runs the NodesThread class
 	 */
 	public void run() {
-		// TODO add if statement for checkingConsensus
+		PrintWriter outNode = null;
+		BufferedReader inNode = null;
 		
 		try {
-			PrintWriter outNode = new PrintWriter(node.getOutputStream(), true);
-			BufferedReader inNode = new BufferedReader(new InputStreamReader(node.getInputStream()));
+			outNode = new PrintWriter(node.getOutputStream(), true);
+			inNode = new BufferedReader(new InputStreamReader(node.getInputStream()));
 			
 			JSONObject request = new JSONObject();
-			
+			System.out.println("Consensus: " + this.consensus);
 			if(!consensus) {
 				request.put("Type", "Data");
 				request.put("List", partialDataList);
@@ -312,6 +350,7 @@ class NodesThread extends Thread {
 			
 			String stringResponse = inNode.readLine();
 			JSONObject response = new JSONObject(stringResponse);
+			System.out.println("[DEBUG] Consensus result: " + response.toString());
 			if(response.get("Type").equals("Result")) {
 				clientData.setResult(response.getInt("Result"), this.nodeNumber);
 			}
@@ -322,7 +361,6 @@ class NodesThread extends Thread {
 		catch(IOException e) {
 			System.out.println("Connection error");
 		}
-		
 	}
 }
 

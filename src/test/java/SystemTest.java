@@ -17,69 +17,24 @@ public class SystemTest {
 	Socket client;
 	List<Process> nodeProcesses = new ArrayList<>();
 	
-	@DisplayName("Make connections")
-	public void setUp(boolean fault) {
-		try {
-			for (int i = 0; i < 3; i++) {
-				int port = 8081 + i;
-				
-				// Mimic: gradle runNodes -PPort=8081 -PHost=localhost -PFault=false
-				String gradleCommand = System.getProperty("os.name").toLowerCase().contains("win") ? "gradlew.bat" : "./gradlew";
-				ProcessBuilder pb;
-				if(i == 0 && fault) {
-					pb = new ProcessBuilder(
-							gradleCommand,
-							"runNodes",
-							"-PHost=localhost",
-							"-PPort=" + port,
-							"-PFault=" + true
-					);
-				}
-				else {
-					pb = new ProcessBuilder(
-							gradleCommand,
-							"runNodes",
-							"-PHost=localhost",
-							"-PPort=" + port,
-							"-PFault=" + false
-					);
-				}
-				
-				pb.redirectOutput(ProcessBuilder.Redirect.INHERIT);
-				pb.redirectError(ProcessBuilder.Redirect.INHERIT);
-				nodeProcesses.add(pb.start());
-				
-				Thread.sleep(500); // brief delay to let each Node start
-			}
-		
-			// Connect client to Leader
-			client = new Socket("localhost", 8080);
-		}
-		catch(Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
+	@DisplayName("")
+	public void setUp() {}
 	
+	@AfterEach
 	@DisplayName("Close all connections")
-	public void tearDown() throws IOException {
-		for (Process p : nodeProcesses) {
-			p.destroy();
-			if (p.isAlive()) {
-				p.destroyForcibly();
-			}
-		}
-		
-		if (client != null) client.close();
-	}
+	public void tearDown() throws IOException {}
 	
 	@Test
 	@DisplayName("Send data test")
 	public void exampleList() {
-		setUp(false);
+		PrintWriter outClient = null;
+		BufferedReader inClient = null;
+		
 		try {
-			PrintWriter outClient = new PrintWriter(client.getOutputStream(), true);
-			BufferedReader inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
-			
+			client = new Socket("localhost", 8080);
+			outClient = new PrintWriter(client.getOutputStream(), true);
+			inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			System.out.println("Made in out client");
 			// Read initial welcome message
 			String startMessage = inClient.readLine();
 			System.out.println("Client received: " + startMessage);
@@ -88,6 +43,7 @@ public class SystemTest {
 			for(int i = 1; i < exampleList.length; i++) {
 				exampleList[i] = i;
 			}
+			System.out.println("Example list created");
 			
 			JSONObject request = new JSONObject();
 			request.put("Type", "Data");
@@ -95,10 +51,12 @@ public class SystemTest {
 			request.put("Delay", 1);
 			
 			outClient.println(request);
+			System.out.println("Sent request");
 			
 			// Read response
 			String stringResponse = inClient.readLine();
 			JSONObject response = new JSONObject(stringResponse);
+			System.out.println("Response to string: " + response);
 			int singleSumResult = response.getInt("Single");
 			int distributedSumResult = response.getInt("Distributed");
 			int singleTime = response.getInt("SingleTime");
@@ -109,21 +67,32 @@ public class SystemTest {
 			assertEquals(66, singleSumResult);
 			assertEquals(66, distributedSumResult);
 			
-			tearDown();
-			
 		}
 		catch(IOException e) {
 			throw new RuntimeException(e);
+		}
+		finally {
+			try {
+				if(client != null) {client.close();}
+				if(outClient != null) outClient.close();
+				if(inClient != null) inClient.close();
+			}
+				catch(IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 	
 	@Test
 	@DisplayName("Tests with a faulty node")
 	public void faultyNode() {
-		setUp(true);
+		PrintWriter outClient = null;
+		BufferedReader inClient = null;
+		
 		try {
-			PrintWriter outClient = new PrintWriter(client.getOutputStream(), true);
-			BufferedReader inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			client = new Socket("localhost", 8080);
+			outClient = new PrintWriter(client.getOutputStream(), true);
+			inClient = new BufferedReader(new InputStreamReader(client.getInputStream()));
 			
 			// Read initial welcome message
 			String startMessage = inClient.readLine();
@@ -152,6 +121,16 @@ public class SystemTest {
 		}
 		catch(IOException e) {
 			throw new RuntimeException(e);
+		}
+		finally {
+			try {
+				if(client != null) {client.close();}
+				if(outClient != null) outClient.close();
+				if(inClient != null) inClient.close();
+			}
+			catch(IOException e) {
+				throw new RuntimeException(e);
+			}
 		}
 	}
 }

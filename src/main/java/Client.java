@@ -27,9 +27,15 @@ public class Client {
 		int port = Integer.parseInt(args[1]);
 		BufferedReader input = new BufferedReader(new InputStreamReader(System.in));
 		
-		try(Socket server = new Socket(host, port);
-			PrintWriter out = new PrintWriter(server.getOutputStream(), true);
-			BufferedReader in = new BufferedReader(new InputStreamReader(server.getInputStream()))) {
+		Socket server = null;
+		PrintWriter out = null;
+		BufferedReader in = null;
+		
+		try {
+			server = new Socket(host, port);
+			out = new PrintWriter(server.getOutputStream(), true);
+			in = new BufferedReader(new InputStreamReader(server.getInputStream()));
+			
 			System.out.println("Connected to Leader at Host: " + host + ", Port: " + port);
 		
 			while(true) {
@@ -126,6 +132,17 @@ public class Client {
 		}
 		catch(IOException e) {
 			System.out.println("[DEBUG] Connection error");
+		}
+		finally {
+			try {
+				System.out.println("\n[DEBUG] Shutting down client...");
+				server.close();
+				in.close();
+				out.close();
+				System.out.println("[DEBUG] Resources closed successfully.");
+			} catch (IOException e) {
+				System.out.println("[DEBUG] Error during shutdown: " + e.getMessage());
+			}
 		}
 	}
 }
