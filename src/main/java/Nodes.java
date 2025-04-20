@@ -1,6 +1,3 @@
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,8 +7,11 @@ import java.net.Socket;
 
 import java.util.Random;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
 /**
- * Nodes class handles the distributed sum calculations
+ * Nodes class handles the distributed sum calculations.
  *
  * @author Jacob Barrios
  * @version 1.0
@@ -19,7 +19,7 @@ import java.util.Random;
 public class Nodes {
 	
 	/**
-	 * Main that takes arguments from gradle run command for the Leader host, and the Node port
+	 * Main that takes arguments from gradle run command for the Leader host, and the Node port.
 	 *
 	 * @param args Contains Leader host, and Node port
 	 */
@@ -90,7 +90,7 @@ public class Nodes {
 	}
 	
 	/**
-	 * Converts the giving JSONArray into int[]
+	 * Converts the giving JSONArray into int[].
 	 *
 	 * @param JSONList List sent from client
 	 * @return new int[] list
@@ -107,7 +107,7 @@ public class Nodes {
 	}
 	
 	/**
-	 * Calculates the sum of the partialDataList
+	 * Calculates the sum of the partialDataList.
 	 *
 	 * @param partialDataList List of integers for calculation
 	 * @param delay Delay between each computation

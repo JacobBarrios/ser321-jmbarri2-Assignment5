@@ -1,6 +1,3 @@
-import org.json.JSONArray;
-import org.json.JSONObject;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,9 +6,13 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+
 /**
  * Leader class handles the single sum computation, and handles communication between nodes
- * for distributed sum calculations
+ * for distributed sum calculations.
  *
  * @author Jacob Barrios
  * @version 1.0
@@ -20,13 +21,13 @@ public class Leader {
 	
 	/**
 	 * Main that takes arguments from gradle run command for the client port, and the node port
-	 * Creates threads for multiple client, and include 3 nodes for Distributed sum calculations
+	 * Creates threads for multiple client, and include 3 nodes for Distributed sum calculations.
 	 *
 	 * @param args Contains client port, and node port
 	 */
 	public static void main(String[] args) {
-		int Cport = Integer.parseInt(args[0]);
-		int Nport = Integer.parseInt(args[1]);
+		int cPort = Integer.parseInt(args[0]);
+		int nPort = Integer.parseInt(args[1]);
 		ServerSocket server = null;
 		ServerSocket node1Server = null;
 		ServerSocket node2Server = null;
@@ -38,10 +39,10 @@ public class Leader {
 		Socket client = null;
 		
 		try {
-			server = new ServerSocket(Cport);
-			node1Server = new ServerSocket(Nport);
-			node2Server = new ServerSocket((Nport + 1));
-			node3Server = new ServerSocket((Nport + 2));
+			server = new ServerSocket(cPort);
+			node1Server = new ServerSocket(nPort);
+			node2Server = new ServerSocket((nPort + 1));
+			node3Server = new ServerSocket((nPort + 2));
 			
 			while(true) {
 				System.out.println("[DEBUG] Waiting for node connections...");
@@ -85,7 +86,7 @@ public class Leader {
 
 /**
  * Represents the thread for each client to handle single sum calculations
- * Handles result of Single and Distributed sum calculations
+ * Handles result of Single and Distributed sum calculations.
  */
 class LeaderThread extends Thread {
 	private final Socket client;
@@ -188,6 +189,16 @@ class LeaderThread extends Thread {
 		}
 	}
 	
+	/**
+	 * Performs a consensus check by sending expected results to each node
+	 * and confirming whether each node's result matches.
+	 *
+	 * @param clientData The ClientData object containing the full list and expected results
+	 * @param node1 Socket for Node 1
+	 * @param node2 Socket for Node 2
+	 * @param node3 Socket for Node 3
+	 * @return true if all nodes report matching results, false otherwise
+	 */
 	public boolean computationConsensus(ClientData clientData, Socket node1, Socket node2, Socket node3) {
 		int[] clientDataList = clientData.getDataList();
 		int partialSize = clientDataList.length / 3;
@@ -218,6 +229,15 @@ class LeaderThread extends Thread {
 		
 	}
 	
+	/**
+	 * Distributes parts of the data to nodes and waits for them to return their computed partial sums.
+	 *
+	 * @param clientData The ClientData object containing the list and delay
+	 * @param node1 Socket for Node 1
+	 * @param node2 Socket for Node 2
+	 * @param node3 Socket for Node 3
+	 * @return Sum of all values as computed by the nodes
+	 */
 	public int distributedSum(ClientData clientData, Socket node1, Socket node2, Socket node3) {
 		int[] clientDataList = clientData.getDataList();
 		int partialSize = clientDataList.length / 3;
@@ -248,7 +268,7 @@ class LeaderThread extends Thread {
 	}
 	
 	/**
-	 * Method to handle the single sum calculations
+	 * Method to handle the single sum calculations.
 	 *
 	 * @param clientData Class that holds the list of data
 	 * @return Result of calculations
@@ -274,7 +294,7 @@ class LeaderThread extends Thread {
 	}
 	
 	/**
-	 * Converts the giving JSONArray into int[]
+	 * Converts the giving JSONArray into int[].
 	 *
 	 * @param JSONList List sent from client
 	 * @return new int[] list
@@ -293,7 +313,7 @@ class LeaderThread extends Thread {
 
 /**
  * Represents the thread for each node to handle distributed sum calculations
- * Sends data to 3 nodes for distribute sum calculations
+ * Sends data to 3 nodes for distribute sum calculations.
  */
 class NodesThread extends Thread {
 	private final Socket node;
@@ -303,7 +323,7 @@ class NodesThread extends Thread {
 	private final boolean consensus;
 	
 	/**
-	 * Creates a new instance of NodesThread
+	 * Creates a new instance of NodesThread.
 	 *
 	 * @param node Socket of node
 	 * @param partialDataList Partial list of data
@@ -365,7 +385,7 @@ class NodesThread extends Thread {
 }
 
 /**
- * This class represents the shared data between Leader and Nodes
+ * This class represents the shared data between Leader and Nodes.
  */
 class ClientData {
 	private int[] dataList;
@@ -378,7 +398,7 @@ class ClientData {
 	private boolean consensus3;
 	
 	/**
-	 * Creates a new instance of ClientData
+	 * Creates a new instance of ClientData.
 	 * @param dataList
 	 * @param delay
 	 */

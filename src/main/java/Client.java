@@ -9,16 +9,15 @@ import org.json.JSONObject;
 
 /**
  * Client class handles the communication between the Leader to calculate the sum of integers
- * in a list
+ * in a list.
  *
  * @author Jacob Barrios
  * @version 1.0
  */
 public class Client {
-	
 	/**
 	 * Main that takes arguments from gradle run command for the host, and port of the Leader
-	 * Handles input of the user for list of integer, and delay time
+	 * Handles input of the user for list of integer, and delay time.
 	 *
 	 * @param args Contains Leader host, and port
 	 */

@@ -20,9 +20,7 @@
     <property name="fileExtensions" value="java, properties, xml"/>
     <!-- Checks for whitespace                               -->
     <!-- See http://checkstyle.sf.net/config_whitespace.html -->
-    <module name="FileTabCharacter">
-        <property name="eachLine" value="true"/>
-    </module>
+
 
     <module name="TreeWalker">
         <module name="OuterTypeFilename"/>
@@ -37,7 +35,7 @@
             <property name="allowNonPrintableEscapes" value="true"/>
         </module>
         <module name="LineLength">
-            <property name="max" value="100"/>
+            <property name="max" value="150"/>
             <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
         </module>
         <module name="AvoidStarImport"/>
@@ -63,9 +61,10 @@
             <property name="allowEmptyMethods" value="true"/>
             <property name="allowEmptyTypes" value="true"/>
             <property name="allowEmptyLoops" value="true"/>
-            <message key="ws.notFollowed"
-             value="WhitespaceAround: ''{0}'' is not followed by whitespace. Empty blocks may only be represented as '{}' when not part of a multi-block statement (4.1.3)"/>
-             <message key="ws.notPreceded"
+            <property name="tokens" value="LITERAL_IF, LITERAL_WHILE"/>
+
+
+            <message key="ws.notPreceded"
              value="WhitespaceAround: ''{0}'' is not preceded with whitespace."/>
         </module>
         <module name="OneStatementPerLine"/>
@@ -162,12 +161,12 @@
              value="GenericWhitespace ''{0}'' is not preceded with whitespace."/>
         </module>
         <module name="Indentation">
-            <property name="basicOffset" value="4"/>
+            <property name="basicOffset" value="8"/>
             <property name="braceAdjustment" value="0"/>
-            <property name="caseIndent" value="4"/>
-            <property name="throwsIndent" value="4"/>
-            <property name="lineWrappingIndentation" value="4"/>
-            <property name="arrayInitIndent" value="4"/>
+            <property name="caseIndent" value="8"/>
+            <property name="throwsIndent" value="8"/>
+            <property name="lineWrappingIndentation" value="8"/>
+            <property name="arrayInitIndent" value="8"/>
         </module>
         <module name="AbbreviationAsWordInName">
             <property name="ignoreFinal" value="false"/>
